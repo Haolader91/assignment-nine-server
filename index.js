@@ -56,6 +56,18 @@ async function run() {
       res.json(result);
     });
 
+    app.patch("/booking/:id", async (req, res) => {
+      const { id } = req.params;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "Cancelled",
+        },
+      };
+      const result = await bookingCollection.updateOne(filter, updateDoc);
+      res.json(result);
+    });
+
     // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
