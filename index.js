@@ -59,9 +59,13 @@ async function run() {
       const { search } = req.query;
       let result;
       if (search) {
-        result = roomsCollection.find({ roomName: search });
+        result = await roomsCollection
+          .find({
+            roomName: { $regex: search, $options: "i" },
+          })
+          .toArray();
       } else {
-        const result = await roomsCollection.find().toArray();
+        result = await roomsCollection.find().toArray();
       }
       res.json(result);
     });
