@@ -24,6 +24,7 @@ async function run() {
     const db = client.db("StudyNook");
 
     const roomsCollection = db.collection("rooms");
+    const bookingCollection = db.collection("bookings");
 
     app.get("/rooms", async (req, res) => {
       const result = await roomsCollection.find().toArray();
@@ -32,7 +33,7 @@ async function run() {
 
     app.get("/rooms/:id", async (req, res) => {
       const { id } = req.params;
-      const result = await roomsCollection.findOne({ _id: id });
+      const result = await roomsCollection.findOne({ _id: new ObjectId(id) });
       res.json(result);
     });
 
@@ -43,7 +44,19 @@ async function run() {
       res.json(result);
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // booking
+    app.post("/booking", async (req, res) => {
+      const bookingData = req.body;
+      const result = await bookingCollection.insertOne(bookingData);
+      res.json(result);
+    });
+    app.get("/booking/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await bookingCollection.find({ userId: id }).toArray();
+      res.json(result);
+    });
+
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
