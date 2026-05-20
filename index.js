@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 dotenv.config();
 const uri = process.env.MONGODB_URI;
 const app = express();
@@ -10,6 +11,10 @@ const PORT = process.env.PORT;
 app.use(express.json());
 app.use(cors());
 
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+);
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -17,6 +22,30 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const middle = (req, res, next) => {
+  console.log(`${req.method} | ${req.url}`);
+  next();
+};
+
+const veryToken = async (req, res, next) => {
+  const { authorization } = req.headers;
+  const token = authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorize" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    req.user = payload;
+
+    next();
+  } catch (error) {
+    console.error("Token validation failed:", error);
+    return res.status(401).json({ message: "Unauthorize" });
+  }
+};
 async function run() {
   try {
     await client.connect();
@@ -27,11 +56,17 @@ async function run() {
     const bookingCollection = db.collection("bookings");
 
     app.get("/rooms", async (req, res) => {
-      const result = await roomsCollection.find().toArray();
+      const { search } = req.query;
+      let result;
+      if (search) {
+        result = roomsCollection.find({ roomName: search });
+      } else {
+        const result = await roomsCollection.find().toArray();
+      }
       res.json(result);
     });
 
-    app.get("/rooms/:id", async (req, res) => {
+    app.get("/rooms/:id", middle, veryToken, async (req, res) => {
       const { id } = req.params;
       const result = await roomsCollection.findOne({ _id: new ObjectId(id) });
       res.json(result);
@@ -65,6 +100,13 @@ async function run() {
         },
       };
       const result = await bookingCollection.updateOne(filter, updateDoc);
+      res.json(result);
+    });
+
+    // Available
+    app.get("/available", async (req, res) => {
+      const available = roomsCollection.find().limit(6);
+      const result = await available.toArray();
       res.json(result);
     });
 
