@@ -109,7 +109,7 @@ async function run() {
 
     // Available
     app.get("/available", async (req, res) => {
-      const available = roomsCollection.find().limit(6);
+      const available = roomsCollection.find().sort({ _id: -1 }).limit(6);
       const result = await available.toArray();
       res.json(result);
     });
