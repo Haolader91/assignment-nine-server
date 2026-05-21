@@ -55,6 +55,59 @@ async function run() {
     const roomsCollection = db.collection("rooms");
     const bookingCollection = db.collection("bookings");
 
+    app.delete("/rooms/:id", middle, veryToken, async (req, res) => {
+      const { id } = req.params;
+      const userEmail = req.user?.email;
+
+      const room = await roomsCollection.findOne({ _id: new ObjectId(id) });
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      if (room.ownerEmail !== userEmail) {
+        return res
+          .status(403)
+          .json({ message: "Forbidden: You are not the owner of this room" });
+      }
+
+      const filter = { _id: new ObjectId(id) };
+      const result = await roomsCollection.deleteOne(filter);
+      res.json(result);
+    });
+
+    app.patch("/rooms/:id", middle, veryToken, async (req, res) => {
+      const { id } = req.params;
+      const updatedData = req.body;
+      const userEmail = req.user?.email;
+
+      const room = await roomsCollection.findOne({ _id: new ObjectId(id) });
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      if (room.ownerEmail !== userEmail) {
+        return res
+          .status(403)
+          .json({ message: "Forbidden: You are not the owner of this room" });
+      }
+
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          roomName: updatedData.roomName,
+          description: updatedData.description,
+          imageUrl: updatedData.imageUrl,
+          floor: updatedData.floor,
+          capacity: Number(updatedData.capacity),
+          price: Number(updatedData.price),
+          amenities: updatedData.amenities,
+        },
+      };
+
+      const result = await roomsCollection.updateOne(filter, updateDoc);
+      res.json(result);
+    });
+
     app.get("/rooms", async (req, res) => {
       const { search } = req.query;
       let result;
@@ -70,7 +123,7 @@ async function run() {
       res.json(result);
     });
 
-    app.get("/rooms/:id", middle, veryToken, async (req, res) => {
+    app.get("/rooms/:id", async (req, res) => {
       const { id } = req.params;
       const result = await roomsCollection.findOne({ _id: new ObjectId(id) });
       res.json(result);
