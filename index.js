@@ -49,7 +49,7 @@ const veryToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("StudyNook");
 
@@ -275,7 +275,7 @@ async function run() {
                   endHour: booking.endHour,
                 },
               },
-              $inc: { bookingCount: -1 }, // একই সাথে কাউন্ট ১ কমিয়ে দেওয়া হলো
+              $inc: { bookingCount: -1 },
             },
           );
         }
