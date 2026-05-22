@@ -248,7 +248,9 @@ async function run() {
           return res.status(404).json({ message: "Booking not found" });
         }
 
-        if (booking.userEmail !== userEmail) {
+        const savedEmail = booking.userEmail || booking.email;
+
+        if (savedEmail !== userEmail) {
           return res.status(403).json({
             message: "Forbidden: You cannot cancel someone else's booking",
           });
@@ -262,11 +264,21 @@ async function run() {
         };
 
         const result = await bookingCollection.updateOne(filter, updateDoc);
-
-        await roomsCollection.updateOne(
-          { _id: new ObjectId(booking.roomId) },
-          { $inc: { bookingCount: -1 } },
-        );
+        if (booking.roomId) {
+          await roomsCollection.updateOne(
+            { _id: new ObjectId(booking.roomId) },
+            {
+              $pull: {
+                bookedSlots: {
+                  date: booking.date,
+                  startHour: booking.startHour,
+                  endHour: booking.endHour,
+                },
+              },
+              $inc: { bookingCount: -1 }, // একই সাথে কাউন্ট ১ কমিয়ে দেওয়া হলো
+            },
+          );
+        }
 
         res.json(result);
       } catch (error) {
